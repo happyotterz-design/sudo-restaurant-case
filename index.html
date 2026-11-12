@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수도 레스토랑 사건 — 형사 수첩</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#111317;color:#F3EAD9;font-family:'Noto Sans KR',sans-serif}
+  body{min-height:100vh;display:flex;justify-content:center;padding:20px 12px 28px}
+  .wrap{width:100%;max-width:960px;display:flex;flex-direction:column;gap:12px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+  header h1{margin:0;font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:clamp(26px,4vw,38px);letter-spacing:-1px}
+  header h1 span{color:#F0646A}
+  .tag{font-family:'Press Start 2P',monospace;font-size:10px;color:#B9B1A3;letter-spacing:1px}
+  .hud{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;background:#181B20;border:3px solid #3A3F47;padding:10px 14px;font-size:15px;font-weight:700}
+  .hud .label{font-family:'Press Start 2P',monospace;font-size:10px;color:#F2C230}
+  .chk{display:inline-flex;align-items:center;gap:7px;color:#B9B1A3}
+  .chk i{width:14px;height:14px;border:3px solid #6F7780;display:inline-block}
+  .chk.on{color:#F3EAD9}
+  .chk.on i{background:#F0646A;border-color:#F0646A}
+  .frame{position:relative;width:100%;aspect-ratio:320/208;background:#000;border:4px solid #F3EAD9;box-shadow:0 0 0 4px #111317,0 0 0 8px #3A3F47}
+  canvas#game{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+  .stage{position:relative}
+  .dialog{position:absolute;left:3%;right:3%;bottom:4%;background:#0D0F12;border:4px solid #F3EAD9;box-shadow:inset 0 0 0 3px #3A3F47;padding:14px 16px 14px 14px;display:none;gap:14px;align-items:flex-start;min-height:28%}
+  .dialog.show{display:flex}
+  .portrait{width:68px;height:68px;flex:0 0 68px;background:#2A2C3F;border:3px solid #6F7780;image-rendering:pixelated}
+  .dtext{flex:1;min-width:0}
+  .dname{display:inline-block;background:#F0646A;color:#111317;font-weight:900;font-size:14px;padding:2px 8px;margin-bottom:8px}
+  .dline{font-size:clamp(15px,2.1vw,19px);font-weight:700;line-height:1.55;min-height:3.1em;word-break:keep-all}
+  .more{position:absolute;right:14px;bottom:10px;font-family:'Press Start 2P',monospace;font-size:12px;color:#F2C230;animation:blink 0.8s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .overlay{position:absolute;inset:0;background:rgba(13,15,18,0.92);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;padding:24px}
+  .overlay.show{display:flex}
+  .overlay h2{margin:0;font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:clamp(30px,6vw,60px);line-height:1.05}
+  .overlay h2 span{color:#F0646A}
+  .overlay p{margin:0;font-size:clamp(14px,2vw,18px);font-weight:700;color:#D9D1C3;line-height:1.6;max-width:640px;word-break:keep-all}
+  .overlay ul{margin:0;padding:0;list-style:none;font-size:clamp(13px,1.8vw,16px);text-align:left;color:#F3EAD9;line-height:1.7}
+  .overlay ul li::before{content:'▪ ';color:#F2C230}
+  .btn{font-family:'Noto Sans KR',sans-serif;font-weight:900;font-size:18px;background:#F0646A;color:#111317;border:0;padding:12px 26px;min-height:48px;cursor:pointer;box-shadow:0 5px 0 #8E2F33}
+  .btn:active{transform:translateY(4px);box-shadow:0 1px 0 #8E2F33}
+  .btn:focus-visible{outline:3px solid #F2C230;outline-offset:3px}
+  .hint{font-size:14px;color:#B9B1A3;text-align:center}
+  .controls{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:4px 6px}
+  .dpad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:4px}
+  .dpad button,.abtn{background:#2A2C3F;color:#F3EAD9;border:3px solid #6F7780;font-family:'Press Start 2P',monospace;font-size:14px;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
+  .dpad button:active,.abtn:active{background:#43465F}
+  .abtn{width:84px;height:84px;border-radius:50%;background:#8E2F33;border-color:#F0646A;font-family:'Noto Sans KR',sans-serif;font-weight:900;font-size:17px}
+  .keys{font-size:13px;color:#B9B1A3;text-align:center;line-height:1.6}
+  .idle{display:none}
+  @media (max-width:760px){
+    body{padding:12px 8px 20px}
+    .hud{font-size:13px;gap:6px 12px;padding:8px 10px}
+    .frame{border-width:3px;box-shadow:0 0 0 3px #111317,0 0 0 6px #3A3F47}
+    .dialog{position:relative;left:auto;right:auto;bottom:auto;margin-top:12px;display:flex;min-height:132px;padding:12px;gap:10px}
+    .dialog:not(.show) .portrait,.dialog:not(.show) .dtext,.dialog:not(.show) .more{display:none}
+    .dialog:not(.show) .idle{display:block;align-self:center;width:100%;text-align:center;font-size:14px;font-weight:700;color:#B9B1A3;line-height:1.6}
+    .portrait{width:52px;height:52px;flex-basis:52px}
+    .dline{font-size:16px}
+    .overlay{position:fixed;z-index:20;overflow-y:auto}
+    .keys{display:none}
+    .controls{padding:4px 2px}
+  }
+  .overlay{overflow-y:auto}
+  button{touch-action:manipulation;-webkit-touch-callout:none}
+  .keys b{font-family:'Press Start 2P',monospace;font-size:10px;color:#F3EAD9;background:#2A2C3F;padding:3px 6px;border:2px solid #6F7780}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>수도 레스토랑 <span>사건</span></h1>
+    <div class="tag">DETECTIVE PROTOTYPE v0.1</div>
+  </header>
+
+  <div class="hud" aria-live="polite">
+    <span class="label">NOTE</span>
+    <span class="chk" id="c-chef"><i></i>주방장</span>
+    <span class="chk" id="c-sup"><i></i>수산물 납품업자</span>
+    <span class="chk" id="c-riv"><i></i>경쟁 식당 사장</span>
+    <span class="chk" id="c-ev"><i></i>단서 <span id="evc">0</span>/3</span>
+  </div>
+
+  <div class="stage">
+  <div class="frame" id="frame">
+    <canvas id="game" width="320" height="208" aria-label="레스토랑 도트 맵. 형사를 움직여 용의자를 조사하세요."></canvas>
+
+      <canvas class="portrait" id="portrait" width="16" height="16" aria-hidden="true"></canvas>
+      <div class="dtext">
+        <div class="dname" id="dname">이름</div>
+        <div class="dline" id="dline"></div>
+      </div>
+
+    <div class="overlay show" id="title">
+      <div class="tag">CASE FILE No. 2026-11</div>
+      <h2>수도 레스토랑<br><span>사건</span></h2>
+      <p>'참치 코스'를 먹은 손님이 쓰러졌다.<br>당신은 형사. 세 사람의 이야기를 들어라.</p>
+      <button class="btn" id="startBtn" type="button">조사 시작</button>
+      <div class="hint">방향키·WASD로 이동 / 스페이스·Enter로 대화·조사</div>
+    </div>
+
+    <div class="overlay" id="ending">
+      <div class="tag">CHAPTER 1 CLEAR</div>
+      <h2 style="font-family:'Press Start 2P',monospace;font-size:clamp(20px,4.6vw,40px);line-height:1.4">TO BE<br><span>CONTINUED...</span></h2>
+      <p>세 사람 모두 그럴듯한 알리바이가 있다.<br>정말 참치였을까, 아니면 메로였을까?<br>답은 생선 조각의 DNA 서열이 알고 있다.</p>
+      <ul id="clues"></ul>
+      <p style="color:#F2C230">다음 장 ▶ DNA 분석실</p>
+      <button class="btn" id="againBtn" type="button">처음부터 다시</button>
+    </div>
+  </div>
+    <div class="dialog" id="dialog" role="dialog" aria-live="polite">
+      <div class="idle">방향 버튼으로 걸어가서, <span style="color:#F2C230">!</span> 가 뜨면 <b style="color:#F0646A">대화</b> 버튼!</div>
+      <canvas class="portrait" id="portrait" width="16" height="16" aria-hidden="true"></canvas>
+      <div class="dtext">
+        <div class="dname" id="dname">이름</div>
+        <div class="dline" id="dline"></div>
+      </div>
+      <div class="more" id="more">▼</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="dpad" aria-label="방향 버튼">
+      <span></span><button type="button" data-dir="up" aria-label="위">▲</button><span></span>
+      <button type="button" data-dir="left" aria-label="왼쪽">◀</button><span></span><button type="button" data-dir="right" aria-label="오른쪽">▶</button>
+      <span></span><button type="button" data-dir="down" aria-label="아래">▼</button><span></span>
+    </div>
+    <div class="keys">
+      <div><b>←↑↓→</b> 이동 &nbsp; <b>SPACE</b> 대화</div>
+      <div>용의자 머리 위 <span style="color:#F2C230">!</span> 표시가 뜨면 말을 걸 수 있어요</div>
+    </div>
+    <button type="button" class="abtn" id="aBtn" aria-label="대화하기">대화</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const TS = 16, COLS = 20, ROWS = 13;
+const cv = document.getElementById('game');
+const ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+/* ---------- MAP ---------- */
+const MAP = [
+  "WWWWWWWWWWWWWWWWWWWW",
+  "WkkkkkkkWWsssssssssW",
+  "WkCCCCkkWWsBBssssssD",
+  "WkkkkkkkWWsBsssssssW",
+  "WtkkkkkkWWssssssssBW",
+  "WWWWkkWWWWWWWssWWWWW",
+  "W..................W",
+  "W..TT....TT....TT..W",
+  "W..................W",
+  "W..TT....XT....TT..W",
+  "W..................W",
+  "W..................W",
+  "WWWWWWWWWDDWWWWWWWWW"
+];
+const tile = (x,y) => (y<0||y>=ROWS||x<0||x>=COLS) ? 'W' : MAP[y][x];
+const SOLID = new Set(['W','C','T','X','B','D','t']);
+
+/* ---------- SPRITES ---------- */
+const HEADS = {
+  det:  ["................","....hhhhhhhh....","....hhhhhhhh....","..hhhhhhhhhhhh..","....ssssssss....","....sesssses....","....ssssssss...."],
+  chef: ["....aaaaaaaa....","...aaaaaaaaaa...","....aaaaaaaa....","....ssssssss....","....sesssses....","....ssssssss....",".....ssssss....."],
+  sup:  ["................","................","....hhhhhhhh....","....hhhhhhhhhh..","....ssssssss....","....sesssses....","....ssssssss...."],
+  riv:  ["................","................","....hhhhhhhh....","....hhssssss....","....ssssssss....","....sesssses....","....ssssssss...."]
+};
+const BODY = [".....ssssss.....","...cccccccccc...","..cccccaaccccc..","..cccccaaccccc..","..sccccddccccs..","....cccccccc....","....pppppppp....","....ppp..ppp....","...bbbb..bbbb..."];
+const PALS = {
+  det:  {h:'#6B4423',s:'#F1C27D',e:'#1A1A1A',c:'#C9A46A',a:'#8B2E2E',d:'#9C7B45',p:'#3B3B46',b:'#1E1E22'},
+  chef: {h:'#FFFFFF',s:'#F1C27D',e:'#1A1A1A',c:'#ECECEC',a:'#FFFFFF',d:'#BDBDBD',p:'#3B3B46',b:'#1E1E22'},
+  sup:  {h:'#2F6FD0',s:'#E0AC69',e:'#1A1A1A',c:'#E8792B',a:'#F2C230',d:'#B95D1E',p:'#2E4A7A',b:'#3A2A1A'},
+  riv:  {h:'#111111',s:'#F1C27D',e:'#1A1A1A',c:'#2A2D35',a:'#D23B3B',d:'#15171B',p:'#2A2D35',b:'#0E0E10'}
+};
+function makeSprite(key){
+  const c = document.createElement('canvas'); c.width = 16; c.height = 16;
+  const g = c.getContext('2d'); const pal = PALS[key];
+  const rows = HEADS[key].concat(BODY);
+  rows.forEach((r,y)=>{ for(let x=0;x<16;x++){ const ch=r[x]; if(ch!=='.' && pal[ch]){ g.fillStyle=pal[ch]; g.fillRect(x,y,1,1);} } });
+  return c;
+}
+const SPR = { det:makeSprite('det'), chef:makeSprite('chef'), sup:makeSprite('sup'), riv:makeSprite('riv') };
+
+/* ---------- CHARACTERS & EVIDENCE ---------- */
+const NPCS = [
+  { id:'chef', name:'주방장', x:4, y:3, spr:'chef', hud:'c-chef',
+    lines:["형사님, 그 참치는 제가 직접 손질했어요.","솔직히... 그날 들어온 참치, 살 색이 평소보다 하얗긴 했어요.","전 저녁 내내 주방에 있었어요. 직원들이 다 봤고요."],
+    clue:"주방장: 그날 참치 살 색이 평소보다 하얬다" },
+  { id:'sup', name:'수산물 납품업자', x:15, y:3, spr:'sup', hud:'c-sup',
+    lines:["전 '참다랑어'라고 적힌 박스 그대로 넘겼어요!","오후 5시에 납품하고 바로 다음 가게로 갔어요. 영수증도 있다고요.","...가격이요? 요즘 참치 값이 워낙 올라서... 그건 왜 물어요?"],
+    clue:"납품업자: '참다랑어' 박스 납품, 가격 질문에 당황" },
+  { id:'riv', name:'경쟁 식당 사장', x:16, y:8, spr:'riv', hud:'c-riv',
+    lines:["저요? 그냥 손님으로 왔어요. 요즘 여기가 그렇게 잘 된다길래.","같은 '참치 코스'를 시켰는데 전 멀쩡해요. 이상하죠?","아, 화장실 찾다가 주방 쪽에 잠깐 들어가긴 했어요. 정말 잠깐이요."],
+    clue:"경쟁 식당 사장: 주방 쪽에 잠깐 들어갔다" }
+];
+const EVID = [
+  { id:'plate', name:'증거물 #1 · 손님 접시', tiles:[[9,9]],
+    lines:["손님이 먹다 남긴 '참치' 회. 살이 유난히 하얗고 기름지다...","DNA 분석실로 보내야겠다."], clue:"증거: 먹다 남은 '참치' 회 — 살이 하얗고 기름짐" },
+  { id:'box', name:'증거물 #2 · 생선 박스', tiles:[[11,2],[12,2],[11,3]],
+    lines:["'참다랑어' 라벨이 붙은 박스.","...그런데 라벨 아래로 다른 글자가 비친다. 누가 덧붙인 걸까?"], clue:"증거: 라벨을 덧붙인 생선 박스" },
+  { id:'trash', name:'단서 발견..!', tiles:[[1,4]],
+    lines:["단서 발견..! 주방 쓰레기통 안에 요리하고 남은 생선 조각이 있다.","살이 유난히 하얗고 기름지다. 이게... 정말 참치라고?","DNA 분석실로 보낼 결정적 증거다. 챙겨두자."], clue:"단서: 주방 쓰레기통 속 남은 생선 조각" }
+];
+
+/* ---------- STATE ---------- */
+let state = 'title';
+const P = { x:10, y:11, fx:10, fy:11, tx:10, ty:11, t:1, moving:false, face:'up', step:0 };
+const done = new Set(), evDone = new Set(), clues = [];
+const held = { up:false, down:false, left:false, right:false };
+const DIRS = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
+
+function reset(){
+  Object.assign(P,{x:10,y:11,fx:10,fy:11,tx:10,ty:11,t:1,moving:false,face:'up'});
+  done.clear(); evDone.clear(); clues.length=0; hinted=false; updateHud();
+}
+function npcAt(x,y){ return NPCS.find(n=>n.x===x&&n.y===y); }
+function evAt(x,y){ return EVID.find(e=>e.tiles.some(t=>t[0]===x&&t[1]===y)); }
+function walkable(x,y){ return !SOLID.has(tile(x,y)) && !npcAt(x,y); }
+
+function targetNear(){
+  const [dx,dy] = DIRS[P.face];
+  const f = npcAt(P.x+dx,P.y+dy) || evAt(P.x+dx,P.y+dy);
+  if (f) return f;
+  for (const k of ['up','down','left','right']){
+    const [ax,ay]=DIRS[k]; const t = npcAt(P.x+ax,P.y+ay) || evAt(P.x+ax,P.y+ay);
+    if (t) return t;
+  }
+  return null;
+}
+
+/* ---------- AUDIO (tiny blips) ---------- */
+let ac = null;
+function blip(freq,dur,vol){
+  if(!ac) return;
+  try{
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.type='square'; o.frequency.value=freq; g.gain.value=vol||0.03;
+    o.connect(g); g.connect(ac.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime+(dur||0.05));
+    o.stop(ac.currentTime+(dur||0.05)+0.02);
+  }catch(e){}
+}
+
+/* ---------- DIALOG ---------- */
+const dlg = document.getElementById('dialog'), dname = document.getElementById('dname'), dline = document.getElementById('dline'), more = document.getElementById('more');
+const pctx = document.getElementById('portrait').getContext('2d'); pctx.imageSmoothingEnabled=false;
+let D = null;
+function openDialog(name, spr, lines, onEnd){
+  D = { lines, i:0, shown:0, onEnd, acc:0 };
+  dname.textContent = name;
+  pctx.clearRect(0,0,16,16);
+  if (spr) pctx.drawImage(SPR[spr],0,0);
+  else { pctx.fillStyle='#F2C230'; pctx.fillRect(3,4,10,9); pctx.fillStyle='#111317'; pctx.fillRect(7,6,2,4); pctx.fillRect(7,11,2,1); }
+  dline.textContent=''; more.style.visibility='hidden';
+  dlg.classList.add('show'); state='dialog';
+}
+function advance(){
+  if(!D) return;
+  const line = D.lines[D.i];
+  if (D.shown < line.length){ D.shown = line.length; dline.textContent=line; more.style.visibility='visible'; return; }
+  D.i++; D.shown=0; dline.textContent=''; more.style.visibility='hidden'; blip(660,0.04);
+  if (D.i >= D.lines.length){
+    dlg.classList.remove('show'); const cb=D.onEnd; D=null; state='play'; if(cb) cb();
+  }
+}
+function tickDialog(dt){
+  if(!D) return;
+  const line = D.lines[D.i];
+  if (D.shown < line.length){
+    D.acc += dt;
+    while (D.acc > 32 && D.shown < line.length){ D.acc-=32; D.shown++; if(D.shown%2===0 && line[D.shown-1]!==' ') blip(380+Math.random()*80,0.03,0.02); }
+    dline.textContent = line.slice(0,D.shown);
+    if (D.shown >= line.length) more.style.visibility='visible';
+  }
+}
+
+/* ---------- HUD ---------- */
+function updateHud(){
+  NPCS.forEach(n=>document.getElementById(n.hud).classList.toggle('on',done.has(n.id)));
+  document.getElementById('evc').textContent = evDone.size;
+  document.getElementById('c-ev').classList.toggle('on', evDone.size===EVID.length);
+}
+let hinted=false;
+function checkEnd(){
+  if (done.size === NPCS.length && evDone.size < EVID.length && !hinted){
+    hinted=true;
+    const left = EVID.filter(e=>!evDone.has(e.id)).map(e=>e.id==='trash'?'주방 구석':e.id==='plate'?'손님 테이블':'창고 박스');
+    setTimeout(()=>openDialog('나 (형사)','det',["세 사람 이야기는 다 들었는데... 뭔가 놓친 게 있어.", left.join(', ')+" 쪽을 다시 살펴볼까?"],null),200);
+    return;
+  }
+  if (done.size === NPCS.length && evDone.size === EVID.length){
+    const ul = document.getElementById('clues'); ul.innerHTML='';
+    clues.forEach(c=>{ const li=document.createElement('li'); li.textContent=c; ul.appendChild(li); });
+    setTimeout(()=>{ state='end'; document.getElementById('ending').classList.add('show'); blip(523,0.12,0.04); setTimeout(()=>blip(659,0.12,0.04),130); setTimeout(()=>blip(784,0.2,0.04),260); }, 250);
+  }
+}
+
+/* ---------- ACTION ---------- */
+function action(){
+  if (state==='dialog'){ advance(); return; }
+  if (state!=='play' || P.moving) return;
+  const t = targetNear(); if(!t) return;
+  blip(880,0.05,0.035);
+  if (t.spr){
+    const n=t; const first=!done.has(n.id);
+    openDialog(n.name, n.spr, n.lines, ()=>{ if(first){ done.add(n.id); clues.push(n.clue); updateHud(); blip(990,0.08,0.04); checkEnd(); } });
+  } else {
+    const e=t; const first=!evDone.has(e.id);
+    openDialog(e.name, null, e.lines, ()=>{ if(first){ evDone.add(e.id); clues.push(e.clue); updateHud(); blip(990,0.08,0.04); checkEnd(); } });
+  }
+}
+
+/* ---------- INPUT ---------- */
+const KEYMAP = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
+window.addEventListener('keydown', e=>{
+  if (KEYMAP[e.code]){ held[KEYMAP[e.code]]=true; e.preventDefault(); }
+  else if (e.code==='Space' || e.code==='Enter' || e.code==='KeyE'){
+    if (state==='title' || state==='end') return;
+    e.preventDefault(); if(!e.repeat) action();
+  }
+});
+window.addEventListener('keyup', e=>{ if (KEYMAP[e.code]) held[KEYMAP[e.code]]=false; });
+window.addEventListener('blur', ()=>{ for(const k in held) held[k]=false; });
+document.querySelectorAll('.dpad button').forEach(b=>{
+  const d=b.dataset.dir;
+  b.addEventListener('pointerdown', e=>{ e.preventDefault(); held[d]=true; try{b.setPointerCapture(e.pointerId);}catch(_){} });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev, ()=>{ held[d]=false; }));
+});
+document.getElementById('aBtn').addEventListener('click', ()=>action());
+document.getElementById('dialog').addEventListener('click', ()=>{ if(state==='dialog') advance(); });
+
+function start(){
+  try{ ac = ac || new (window.AudioContext||window.webkitAudioContext)(); if(ac.state==='suspended') ac.resume(); }catch(e){ ac=null; }
+  document.getElementById('title').classList.remove('show');
+  document.getElementById('ending').classList.remove('show');
+  reset(); state='play';
+  openDialog('나 (형사)', 'det', ["여기가 수도 레스토랑... 손님이 '참치 코스'를 먹고 쓰러졌다고 했지.","주방장, 납품업자, 경쟁 식당 사장. 세 사람의 이야기를 들어보자."], null);
+}
+document.getElementById('startBtn').addEventListener('click', start);
+document.getElementById('againBtn').addEventListener('click', start);
+
+/* ---------- DRAW: TILES ---------- */
+function R(c,x,y,w,h){ ctx.fillStyle=c; ctx.fillRect(x,y,w,h); }
+function hash(x,y){ return ((x*73856093)^(y*19349663))>>>0; }
+function floorDining(x,y){ const px=x*TS,py=y*TS; R(((x+y)%2)?'#5E2430':'#6B2A37',px,py,TS,TS); R('#7A3442',px+3,py+3,1,1); R('#7A3442',px+11,py+10,1,1); }
+function floorKitchen(x,y){ const px=x*TS,py=y*TS; R('#D7DDE2',px,py,TS,TS); R('#B5BEC6',px,py+7,TS,1); R('#B5BEC6',px+7,py,1,TS); R('#B5BEC6',px,py+15,TS,1); R('#B5BEC6',px+15,py,1,TS); }
+function floorStore(x,y){ const px=x*TS,py=y*TS; R('#7D838C',px,py,TS,TS); const h=hash(x,y); R('#6E747C',px+(h%13),py+((h>>4)%13),2,1); R('#8C929B',px+((h>>8)%13),py+((h>>12)%13),1,1); }
+function wall(x,y){
+  const px=x*TS,py=y*TS; R('#2A2C3F',px,py,TS,TS);
+  for(let r=0;r<4;r++){ R('#202232',px,py+r*4+3,TS,1); R('#202232',px+((r%2)?4:12),py+r*4,1,3); }
+  if (tile(x,y+1)!=='W' && y<ROWS-1){ R('#43465F',px,py+10,TS,6); R('#55597A',px,py+10,TS,1); R('#33364C',px,py+15,TS,1); }
+}
+function counter(x,y){
+  floorKitchen(x,y); const px=x*TS,py=y*TS;
+  R('#6C747D',px,py+3,TS,13); R('#9EA7B0',px,py+2,TS,11); R('#CBD2D8',px,py+2,TS,3); R('#59606A',px,py+14,TS,2);
+  if (x===3){ R('#3B3F46',px+3,py+1,10,6); R('#555B63',px+4,py,8,2); R('#E8E8E8',px+6,py-2,1,1); R('#E8E8E8',px+9,py-3,1,1); }
+  if (x===5){ R('#C79A5B',px+2,py+3,12,5); R('#E7A0A6',px+4,py+4,8,3); R('#C9737B',px+5,py+5,1,1); R('#C9737B',px+8,py+5,1,1); }
+}
+function table(x,y,ev){
+  floorDining(x,y); const px=x*TS,py=y*TS;
+  R('#3A141C',px+1,py+4,15,12); R('#F3EAD9',px,py+1,TS,12); R('#D8CDB8',px,py+11,TS,2);
+  R('#C9C2B4',px+4,py+3,8,7); R('#FFFFFF',px+5,py+4,6,5);
+  if (ev){ R('#F7E3E3',px+6,py+5,4,3); R('#E9B7B7',px+6,py+6,4,1); R('#F2C230',px+12,py+1,3,1); R('#F2C230',px+11,py+2,5,3); R('#111317',px+13,py+2,1,2); }
+}
+function box(x,y){
+  floorStore(x,y); const px=x*TS,py=y*TS;
+  R('#5B3D22',px+1,py+3,15,13); R('#B07A45',px+1,py+2,14,13); R('#C99560',px+1,py+2,14,4); R('#E6D3A3',px+7,py+2,2,13);
+  if (x===11&&y===2){ R('#3D7BD9',px+3,py+8,4,4); R('#F3EAD9',px+4,py+9,2,1); R('#F3EAD9',px+4,py+11,2,1); }
+}
+function trash(x,y){
+  floorKitchen(x,y); const px=x*TS,py=y*TS;
+  R('rgba(0,0,0,0.3)',px+3,py+14,11,2);
+  R('#4E5560',px+3,py+5,10,10); R('#6C747D',px+4,py+5,2,10); R('#3A3F47',px+11,py+5,1,10);
+  R('#59606A',px+5,py+8,6,1); R('#59606A',px+5,py+11,6,1);
+  R('#8A929C',px+2,py+3,12,2); R('#A9B1BA',px+6,py+2,4,1);
+  R('#E7A0A6',px+9,py+0,3,3); R('#F7E3E3',px+10,py+1,1,1); R('#C9737B',px+12,py+1,2,1);
+}
+function door(x,y){
+  const px=x*TS,py=y*TS;
+  if (y===ROWS-1){ R('#2A2C3F',px,py,TS,TS); R('#7A4E2A',px+1,py,14,TS); R('#8FB8D8',px+3,py+2,10,6); R('#F2C230',x===9?px+12:px+3,py+10,2,2); }
+  else { R('#7A4E2A',px,py,TS,TS); R('#5A381D',px+2,py+1,12,14); R('#F2C230',px+3,py+8,2,2); }
+}
+function drawMap(){
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    const c=tile(x,y);
+    if(c==='W') wall(x,y); else if(c==='.') floorDining(x,y); else if(c==='k') floorKitchen(x,y); else if(c==='s') floorStore(x,y);
+    else if(c==='C') counter(x,y); else if(c==='T') table(x,y,false); else if(c==='X') table(x,y,true); else if(c==='B') box(x,y); else if(c==='D') door(x,y); else if(c==='t') trash(x,y);
+  }
+  // chalk outline (victim)
+  ctx.fillStyle='#F3EAD9';
+  const pts=[];
+  for(let a=0;a<360;a+=30){ pts.push([133+Math.round(4*Math.cos(a*Math.PI/180)),171+Math.round(4*Math.sin(a*Math.PI/180))]); }
+  for(let xx=138;xx<=166;xx+=2){ pts.push([xx,167]); pts.push([xx,175]); }
+  for(let yy=167;yy<=175;yy+=2) pts.push([167,yy]);
+  for(let i=0;i<6;i++){ pts.push([145+i*2,165-i]); pts.push([150+i*2,177+i]); }
+  pts.forEach(p=>ctx.fillRect(p[0],p[1],1,1));
+  // little labels on rooms
+  ctx.fillStyle='#2A2C3F'; ctx.font='bold 7px monospace';
+}
+
+/* ---------- DRAW: CHARACTERS ---------- */
+let clock=0;
+function shadow(px,py){ ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillRect(px+3,py+14,10,2); }
+function drawChar(spr,px,py,bob,flip){
+  shadow(px,py);
+  if(flip){ ctx.save(); ctx.translate(px+16,0); ctx.scale(-1,1); ctx.drawImage(SPR[spr],0,Math.round(py-2+bob)); ctx.restore(); }
+  else ctx.drawImage(SPR[spr],px,Math.round(py-2+bob));
+}
+function bubble(px,py,done){
+  const b = Math.floor(clock/300)%2;
+  const x=px+5, y=py-12-b;
+  R('#111317',x-1,y-1,8,10); R(done?'#B9B1A3':'#F3EAD9',x,y,6,8); R(done?'#111317':'#F0646A',x+2,y+1,2,4); R(done?'#111317':'#F0646A',x+2,y+6,2,1);
+}
+function draw(){
+  drawMap();
+  const ents=[];
+  NPCS.forEach((n,i)=>ents.push({y:n.y*TS, f:()=>drawChar(n.spr,n.x*TS,n.y*TS,(Math.floor((clock+i*233)/600)%2)?-1:0,false)}));
+  const ppx = (P.fx+(P.tx-P.fx)*P.t)*TS, ppy=(P.fy+(P.ty-P.fy)*P.t)*TS;
+  ents.push({y:ppy, f:()=>drawChar('det',Math.round(ppx),Math.round(ppy), P.moving?((Math.floor(P.t*2)%2)?-1:0):0, P.face==='left')});
+  ents.sort((a,b)=>a.y-b.y).forEach(e=>e.f());
+  if (state==='play' && !P.moving){
+    const t = targetNear();
+    if (t){
+      if (t.spr) bubble(t.x*TS,t.y*TS, done.has(t.id));
+      else { const [tx,ty]=t.tiles[0]; bubble(tx*TS,ty*TS, evDone.has(t.id)); }
+    }
+  }
+}
+
+/* ---------- LOOP ---------- */
+let last=performance.now();
+function update(dt){
+  clock+=dt;
+  if (state==='dialog') tickDialog(dt);
+  if (P.moving){
+    P.t += dt/150;
+    if (P.t>=1){ P.t=1; P.moving=false; P.x=P.tx; P.y=P.ty; P.fx=P.x; P.fy=P.y; }
+  }
+  if (!P.moving && state==='play'){
+    const d = ['up','down','left','right'].find(k=>held[k]);
+    if (d){
+      P.face=d; const [dx,dy]=DIRS[d]; const nx=P.x+dx, ny=P.y+dy;
+      if (walkable(nx,ny)){ P.fx=P.x; P.fy=P.y; P.tx=nx; P.ty=ny; P.t=0; P.moving=true; P.step++; if(P.step%2) blip(140,0.02,0.015); }
+    }
+  }
+}
+function frame(now){
+  const dt=Math.min(50, now-last); last=now;
+  update(dt); draw();
+  requestAnimationFrame(frame);
+}
+updateHud();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
